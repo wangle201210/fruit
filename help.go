@@ -4,7 +4,7 @@ import (
 	"math/rand"
 )
 
-// WeightedChoice 根据权重随机，返回对应选项的索引，O(n)
+// WeightedChoice 根据权重随机，返回对应选项的索引
 func WeightedChoice(weightArray []int) int {
 	if weightArray == nil {
 		return -1

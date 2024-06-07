@@ -3,6 +3,7 @@ package main
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"strconv"
 	"sync"
@@ -16,22 +17,43 @@ const (
 
 var symbols = []string{"🍎", "🍒", "🍋", "🍊", "🍉", "⭐", "7"}
 var awardList = map[string]int{
-	"🍎": 5, "🍒": 10, "🍋": 20, "🍊": 40, "🍉": 80, "⭐": 200, "7": 500,
+	"🍎": 5, "🍒": 10, "🍋": 20, "🍊": 40, "🍉": 80, "⭐": 150, "7": 200,
 }
-var reels = []int{0, 1, 2, 0, 1, 2, 3, 1, 4, 5, 1, 6, 0, 1, 2, 1, 2, 0, 1, 2, 3, 1, 4, 2, 5, 2, 1, 6}
+var reels = []int{0, 1, 2, 0, 4, 2, 3, 6, 4, 5, 1, 6, 0, 4, 2, 1, 3, 0, 5, 2, 3, 1, 4, 3, 5, 2, 1, 6}
 var weight = []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 
-var betList = []string{"7", "14", "21", "28", "35", "42"}
+var betList []string
 
 var (
+	// 全线
 	lines = [][]int{
 		{0, 1, 2},
-		{3, 4, 5},
-		{6, 7, 8},
-		{0, 4, 8},
-		{2, 4, 6},
+		{0, 4, 2},
 		{0, 7, 2},
+		{0, 1, 5},
+		{0, 4, 5},
+		{0, 7, 5},
+		{0, 1, 8},
+		{0, 4, 8},
+		{0, 7, 8},
+		{3, 1, 2},
+		{3, 4, 2},
+		{3, 7, 2},
+		{3, 1, 5},
+		{3, 4, 5},
+		{3, 7, 5},
+		{3, 1, 8},
+		{3, 4, 8},
+		{3, 7, 8},
+		{6, 1, 2},
+		{6, 4, 2},
+		{6, 7, 2},
+		{6, 1, 5},
+		{6, 4, 5},
+		{6, 7, 5},
 		{6, 1, 8},
+		{6, 4, 8},
+		{6, 7, 8},
 	}
 )
 
@@ -44,8 +66,11 @@ var (
 )
 
 type slotGame struct {
+	app fyne.App
 	sync.Mutex
 	windows  fyne.Window
+	payTable fyne.Window
+	history  fyne.Window
 	labels   [][]*canvas.Text
 	wg       *sync.WaitGroup
 	userInfo *userInfo
@@ -58,11 +83,15 @@ type userInfo struct {
 	history [][]string
 }
 
-func newSlotGame(w fyne.Window) *slotGame {
+func newSlotGame(app fyne.App) *slotGame {
 	game := &slotGame{
-		windows: w,
+		app:     app,
+		windows: app.NewWindow("fruit 777"),
 		labels:  make([][]*canvas.Text, rows),
 	}
+	app.Lifecycle().SetOnStopped(func() {
+		game.saveData() // 退出时保存数据
+	})
 	game.loadData() // 加载以前的数据
 	for i := 0; i < rows; i++ {
 		game.labels[i] = make([]*canvas.Text, columns)
@@ -70,8 +99,22 @@ func newSlotGame(w fyne.Window) *slotGame {
 			game.labels[i][j] = canvas.NewText("", nil)
 		}
 	}
-
+	mainContainer := container.NewVBox(
+		game.header(),
+		game.panel(),
+		game.footer(),
+	)
+	game.windows.SetContent(
+		mainContainer,
+	)
+	game.payTableInit()
+	game.historyInit()
 	return game
+}
+
+func (g *slotGame) run() {
+	g.windows.Resize(fyne.NewSize(400, 400))
+	g.windows.ShowAndRun()
 }
 
 func (g *slotGame) startSpin() {
@@ -96,9 +139,10 @@ func (g *slotGame) settle() {
 	award := g.calc()
 	credit, _ := g.userInfo.credit.Get()
 	bet, _ := g.userInfo.bet.Get()
+	credit += award - bet
 	g.userInfo.award.Set(award)
-	g.userInfo.credit.Set(credit + award - bet)
-	g.userInfo.history = append(g.userInfo.history, []string{strconv.Itoa(award), strconv.Itoa(credit), strconv.Itoa(bet)})
+	g.userInfo.credit.Set(credit)
+	g.userInfo.history = append(g.userInfo.history, []string{strconv.Itoa(credit), strconv.Itoa(bet), strconv.Itoa(award)})
 }
 
 func (g *slotGame) calc() (award int) {
@@ -177,9 +221,13 @@ func indexToXY(index int) (x, y int) {
 
 func init() {
 	if debug {
+		// 跑单测时使用
 		reelDelay = 0
 		calcDelay = 0
 		winLineDelay = 0
 		spinColumnDelay = 0
+	}
+	for i := 1; i <= 5; i++ {
+		betList = append(betList, strconv.Itoa(i*len(lines)))
 	}
 }

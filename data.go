@@ -28,7 +28,7 @@ func user2data(info *userInfo) (res *data) {
 
 func data2user(res *data) (info *userInfo) {
 	if res.Bet == 0 {
-		res.Bet = 5
+		res.Bet = len(lines)
 	}
 	if res.Credit == 0 {
 		res.Credit = 1e5
@@ -41,7 +41,7 @@ func data2user(res *data) (info *userInfo) {
 	// info.award.Set(res.Award)
 	info.credit.Set(res.Credit)
 	info.bet.Set(res.Bet)
-	info.history = append(info.history, []string{"bet", "award", "credit"})
+	info.history = append(info.history, []string{"credit", "bet", "award"})
 	return
 }
 

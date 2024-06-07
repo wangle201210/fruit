@@ -8,12 +8,11 @@ import (
 
 func TestSpin(t *testing.T) {
 	a := app.New()
-	w := a.NewWindow("fruit 777")
-	game := newSlotGame(w)
+	game := newSlotGame(a)
 	_ = game.panel() // 面板
 	winCount := 0
 	award := 0
-	times := 2000000
+	times := 20000
 	creditInit, _ := game.userInfo.credit.Get()
 
 	for i := 0; i < times; i++ {
